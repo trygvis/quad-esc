@@ -1,4 +1,8 @@
 *.b#?
 *.pro
+*.epf
 *.s#?
 *.l#?
+*.swp
+.*.un~
+generated/*
