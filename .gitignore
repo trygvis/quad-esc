@@ -6,3 +6,17 @@
 *.swp
 .*.un~
 generated/*
+
+# EagleUp
+board/board_bottom.png
+board/board_top.png
+board/eagle_bottom.png
+board/eagle_bottom_mask.png
+board/eagle_bottom_silk.png
+board/eagle_drill.png
+board/eagle_imagesize.png
+board/eagle_outline.png
+board/eagle_top.png
+board/eagle_top_mask.png
+board/eagle_top_silk.png
+board/*.eup
