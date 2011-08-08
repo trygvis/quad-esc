@@ -24,12 +24,6 @@
 require 'sketchup.rb'
 require 'extensions.rb'
 
-# model = Sketchup.active_model
-# model.modified?
-# UI.messagebox(  "failure" )
-
-# load 'tssop.rb'
-
 class Float
     def mm
         self.to_f * 39.37
@@ -50,9 +44,9 @@ class Integer
     end
 end
 
-class TssopGenerator < Sketchup::Importer
+class TQFPGenerator < Sketchup::Importer
 
-    def initialize
+    def initialize(legCount)
         @a1 = 0.10.mm
         @a2 = 1.00.mm
         @B = 0.40.mm
@@ -60,7 +54,7 @@ class TssopGenerator < Sketchup::Importer
         @d1 = 7.00.mm
         @d2 = (@D-@d1) / 2
         @C = 0.20.mm
-        @e = 2.00.mm
+        @e = 0.80.mm
 
         @q = 0.06.mm
         @p = 0.50.mm
@@ -69,11 +63,17 @@ class TssopGenerator < Sketchup::Importer
         @l1 = 0.30.mm
         @l_extra = 0.05.mm
 
+        @legCount = legCount
+
         # TODO check that d2 - L - l1 - l_extra > 0
         puts("bad? " + (@d2 - @L - @l1 - @l_extra).to_mm_s)
     end
 
-    def generatePackage
+    def newTranslation(x, y, z)
+        Geom::Transformation.translation Geom::Vector3d.new(x, y, z)
+    end
+
+    def generatePackage(model)
         puts("Configuration:")
         puts("D  = " + @D.to_mm_s)
         puts("d1 = " + @d1.to_mm_s)
@@ -86,23 +86,11 @@ class TssopGenerator < Sketchup::Importer
 
         @packageColor = 0x1f1f1f
         @legColor = 0x777777
-        model = Sketchup.active_model
         zero = 0.mm
         one = 1.mm
         model.entities.clear!
-#        model.entities.add_line(
-#            [d2,       d2,       @a1],
-#            [d2 + @d1, d2,       @a1],
-#            [d2 + @d1, d2 + @d1, @a1],
-#            [d2,       d2 + @d1, @a1],
-#            [d2,       d2,       @a1])
-#
-#        model.entities.add_line(
-#            [d2,       d2,       @a1 + @a2],
-#            [d2 + @d1, d2,       @a1 + @a2],
-#            [d2 + @d1, d2 + @d1, @a1 + @a2],
-#            [d2,       d2 + @d1, @a1 + @a2],
-#            [d2,       d2,       @a1 + @a2])
+
+        package = model.entities.add_group
 
         # Package corners [ X, Y, Z ]
         p1 = [
@@ -129,22 +117,6 @@ class TssopGenerator < Sketchup::Importer
             [     @d2,      @d2 + @d1,            @a1 + @p + @C],
             [@d2 + @q, @d2 + @d1 - @q,       @a1 + @p + @C + @p]]
 
-#        model.entities.add_line(p11, p12)
-#        model.entities.add_line(p12, p13)
-#        model.entities.add_line(p13, p14)
-
-#        model.entities.add_line(p21, p22)
-#        model.entities.add_line(p22, p23)
-#        model.entities.add_line(p23, p24)
-
-#        model.entities.add_line(p31, p32)
-#        model.entities.add_line(p32, p33)
-#        model.entities.add_line(p33, p34)
-
-#        model.entities.add_line(p41, p42)
-#        model.entities.add_line(p42, p43)
-#        model.entities.add_line(p43, p44)
-
         def side(entities, a, b)
             entities.add_face(a[0], b[0], b[1]).material=@packageColor
             entities.add_face(a[0], a[1], b[1]).material=@packageColor
@@ -165,12 +137,22 @@ class TssopGenerator < Sketchup::Importer
             entities.add_line(a, c).soft="true"
         end
 
-        side(model.entities, p1, p2)
-        side(model.entities, p2, p3)
-        side(model.entities, p3, p4)
-        side(model.entities, p4, p1)
-        cover(model.entities, p1[0], p2[0], p3[0], p4[0])
-        cover(model.entities, p1[3], p2[3], p3[3], p4[3])
+        if true
+            side(package.entities, p1, p2)
+            side(package.entities, p2, p3)
+            side(package.entities, p3, p4)
+            side(package.entities, p4, p1)
+            cover(package.entities, p1[0], p2[0], p3[0], p4[0])
+            cover(package.entities, p1[3], p2[3], p3[3], p4[3])
+
+            # Generating the pin 1 identifier doesn't quite work yet
+#            pin_group = model.entities.add_group
+#            pin_edges = pin_group.entities.add_circle(Geom::Point3d.new(@D/2, @D/2, p1[3].z), Geom::Vector3d.new(0, 0, 1), 0.5.mm)
+#            pin_group.entities.add_face(pin_edges).pushpull(0.2.mm, false)
+
+#            pin_edges = package.entities.add_circle(Geom::Point3d.new(@D/2, @D/2, p1[3].z), Geom::Vector3d.new(0, 0, 1), 0.5.mm)
+#            package.entities.add_face(pin_edges).pushpull(0.2.mm, false)
+        end
 
         def quad(entities, vertices, material)
             entities.add_face(vertices[0], vertices[1], vertices[2]).material=material
@@ -181,10 +163,15 @@ class TssopGenerator < Sketchup::Importer
         # The leg is constructed from the underside and up
         # starting with the part the furthest away from the package
         # The start point is 0,0,0
-        def leg(entities)
-            t_c = Geom::Transformation.new Geom::Point3d.new(0, 0, @C)
-            t_b = Geom::Transformation.new Geom::Point3d.new(@B, 0, 0)
-            t_l_extra_neg = Geom::Transformation.new Geom::Point3d.new(0, -@l_extra, 0)
+        # TODO: Consider making this a component instead. It would make
+        # post-processing easier as it would be possible to change all
+        # components later in the SketchUp GUI or through a script.
+        def leg(e)
+            group = e.add_group
+            entities = group.entities
+            t_c = newTranslation 0, 0, @C
+            t_b = newTranslation @B, 0, 0
+            t_l_extra_neg = newTranslation 0, -@l_extra, 0
 
             # L segment's plane
             l_lower = [
@@ -277,39 +264,46 @@ class TssopGenerator < Sketchup::Importer
             quad(entities, l2_upper, @legColor)
             quad(entities, l2_left, @legColor)
             quad(entities, l2_right, @legColor)
+
+            group
         end
 
-        # Legs [ X, Y, Z ]
-        leg(model.entities)
+        def legs(entities)
+            group = entities.add_group
+            legSpacing = @e
+            leg = leg(group.entities)
+            (0 .. @legCount - 1).each do |i|
+                leg.transformation = newTranslation @d2 + (@e / 2) + i * @e, 0, 0
+                leg = leg.copy
+            end
+            group
+        end
 
-#        model.entities.add_line(p11, p21)
-#        model.entities.add_line(p12, p22)
-#        model.entities.add_line(p13, p23)
-#        model.entities.add_line(p14, p24)
-#
-#        model.entities.add_line(p21, p31)
-#        model.entities.add_line(p22, p32)
-#        model.entities.add_line(p23, p33)
-#        model.entities.add_line(p24, p34)
-#
-#        model.entities.add_line(p31, p41)
-#        model.entities.add_line(p32, p42)
-#        model.entities.add_line(p33, p43)
-#        model.entities.add_line(p34, p44)
-#
-#        model.entities.add_line(p41, p11)
-#        model.entities.add_line(p42, p12)
-#        model.entities.add_line(p43, p13)
-#        model.entities.add_line(p44, p14)
+        if true
+            legs = legs(package.entities).copy
+            legs.transformation = 
+                (Geom::Transformation.rotation Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1), Math::PI / 2) *
+                (newTranslation 0, -@D, 0)
+            legs = legs.copy
+            legs.transformation = 
+                (Geom::Transformation.rotation Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1), Math::PI) *
+                (newTranslation -@D, -@D, 0)
+            legs = legs.copy
+            legs.transformation = 
+                (Geom::Transformation.rotation Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1), Math::PI * 1.5) *
+                (newTranslation -@D, 0, 0)
+        end
 
-        puts "Done!"
+        # Move the package into it's final position
+        package.transformation = newTranslation -@D / 2, -@D / 2, 0
     end
 end
 
-tssopGenerator = TssopGenerator.new
+tqfpGenerator = TQFPGenerator.new(8)
 
-# UI.menu("PlugIns").add_item("Generate TSSOP package") {
-#     tssopGenerator.generatePackage()
-# }
+UI.menu("PlugIns").add_item("Generate TQFP package") {
+    sketchup = Sketchup.file_new
+    tqfpGenerator.generatePackage(sketchup.active_model)
+}
 
-tssopGenerator.generatePackage()
+# tqfpGenerator.generatePackage()
