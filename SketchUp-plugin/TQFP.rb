@@ -63,6 +63,9 @@ class TQFPGenerator < Sketchup::Importer
         @l1 = 0.30.mm
         @l_extra = 0.05.mm
 
+        @pin_position = 1.mm
+        @pin_diameter = 0.5.mm
+
         @legCount = legCount
 
         # TODO check that d2 - L - l1 - l_extra > 0
@@ -146,9 +149,14 @@ class TQFPGenerator < Sketchup::Importer
             cover(package.entities, p1[3], p2[3], p3[3], p4[3])
 
             # Generating the pin 1 identifier doesn't quite work yet
-#            pin_group = model.entities.add_group
-#            pin_edges = pin_group.entities.add_circle(Geom::Point3d.new(@D/2, @D/2, p1[3].z), Geom::Vector3d.new(0, 0, 1), 0.5.mm)
-#            pin_group.entities.add_face(pin_edges).pushpull(0.2.mm, false)
+            vector = Geom::Vector3d.new(0, 0, 1)
+            vector = vector.normalize!
+
+            # Place the pin in the middle of a face instead of, just to make the pushpull() stuff a bit easier to implement.
+            # As the pin ends up in the bottom right cornder (seen from the top), the model has to be rotated 90 degrees later
+            pin_edges = package.entities.add_circle(Geom::Point3d.new(@D - @d2 - @q - @pin_position, @d2 + @q + @pin_position, p1[3].z), vector, @pin_diameter)
+            pin_edges[0].faces[0].pushpull(-0.2.mm, false)
+#            pin_edges[12].faces[0].pushpull(-0.2.mm, false)
 
 #            pin_edges = package.entities.add_circle(Geom::Point3d.new(@D/2, @D/2, p1[3].z), Geom::Vector3d.new(0, 0, 1), 0.5.mm)
 #            package.entities.add_face(pin_edges).pushpull(0.2.mm, false)
@@ -294,16 +302,23 @@ class TQFPGenerator < Sketchup::Importer
                 (newTranslation -@D, 0, 0)
         end
 
-        # Move the package into it's final position
-        package.transformation = newTranslation -@D / 2, -@D / 2, 0
+        # Move and rotate the package into it's final position
+        package.transformation = 
+            (newTranslation @D / 2, @D / 2, 0) * 
+            (Geom::Transformation.rotation Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1), Math::PI)
     end
+end
+
+def onGenerate(tqfpGenerator)
+    sketchup = Sketchup.file_new
+    model = sketchup.active_model
+    tqfpGenerator.generatePackage(model)
 end
 
 tqfpGenerator = TQFPGenerator.new(8)
 
 UI.menu("PlugIns").add_item("Generate TQFP package") {
-    sketchup = Sketchup.file_new
-    tqfpGenerator.generatePackage(sketchup.active_model)
+    onGenerate(tqfpGenerator)
 }
 
-# tqfpGenerator.generatePackage()
+ onGenerate(tqfpGenerator)
