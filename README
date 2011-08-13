@@ -1,0 +1,15 @@
+This is my ESC[1] for my imaginary Quad Helicopter. It contains a
+microcontroller that controls 4 brushless engines without sensors.
+
+The firmware is supposed to be used from another controller unit and
+communicate over SPI.
+
+Specification/goals:
+- Capable of driving 30A engines
+- SPI protocol for controlling engines
+- Support giving feedback from ADCs
+
+Possible future projects/extensions:
+- Support RC PWM as an input signal
+
+[1]: Electronic Speed Control

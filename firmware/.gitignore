@@ -1,0 +1,4 @@
+*.o
+*.axf
+*.vcd
+test_*_host
