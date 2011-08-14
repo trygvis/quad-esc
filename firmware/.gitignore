@@ -2,3 +2,4 @@
 *.axf
 *.vcd
 test_*_host
+Makefile.common
