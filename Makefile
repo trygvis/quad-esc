@@ -11,7 +11,7 @@ else
 EAGLE = eagle
 endif
 
-all: generated/quad-esc.pdf
+all: generated/quad-esc.pdf generated/quad-esc-board.png generated/quad-esc-schematic.png
 
 generated/quad-esc.pdf: generated/quad-esc-schematic.pdf generated/quad-esc-board-top.pdf generated/quad-esc-board-bottom.pdf
 	@echo Combing all PDFs
@@ -20,10 +20,21 @@ generated/quad-esc.pdf: generated/quad-esc-schematic.pdf generated/quad-esc-boar
 generated/quad-esc-schematic.pdf: board/quad-esc.sch
 generated/quad-esc-board-bottom.pdf: board/quad-esc.brd
 generated/quad-esc-board-top.pdf: board/quad-esc.brd
+generated/quad-esc-board-top.png: board/quad-esc.brd
 
 generated/%: board/%
 	@mkdir -p `dirname $@`
 	@mv $< $@
+
+%-schematic.png: %.sch
+	@echo 'Generating schematic from $< (PNG)'
+	@$(EAGLE) -C"set confirm yes; export image ./tmp.png 300; quit" $< >/dev/null
+	@mv tmp.png $@
+
+%-board.png: %.brd
+	@echo 'Generating board from $< (PNG)'
+	@$(EAGLE) -C"set confirm yes; export image ./tmp.png 300; quit" $< >/dev/null
+	@mv tmp.png $@
 
 %-schematic.pdf: %.sch
 	@echo 'Generating schema from $<'
