@@ -55,8 +55,6 @@ generated/%: board/%
 	@rm tmp
 
 clean:
-	echo EAGLE=$(EAGLE)
-	echo PATH=$(PATH)
 	@rm -rf generated
 	@mkdir generated
 	@rm -f $(wildcard board/*.pdf)

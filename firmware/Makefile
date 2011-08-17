@@ -18,6 +18,8 @@ AVR_OBJCOPY=avr-objcopy
 
 CFLAGS=\
 	--std=c99 \
+	-Wall -Werror \
+	-ggdb \
 	-DSIMAVR_AVR_MCU=atmega48 \
 	-I$(SIMAVR)/include \
 	-I$(SIMAVR)/simavr/sim
@@ -65,10 +67,6 @@ clean:
                                                                                          
 %.s: %.axf
 	@$(AVR_OBJDUMP) -j .text -j .data -j .bss -d  $(<) > $(@)
-
-#%.axf: %.c
-#	@echo avr-gcc $(<)
-#	$(AVR_CC) $(AVR_CFLAGS) $(<) -o $(@)
 
 %.axf: %.c
 	@echo avr-gcc -o $(@) $(^)

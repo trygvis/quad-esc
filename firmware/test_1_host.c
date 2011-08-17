@@ -11,15 +11,20 @@
 #include "sim_vcd_file.h"
 
 // #define TEST_NAME "test_1"
-#define MAX_TIME (1000)
+#define MAX_TIME_US (10 *1000)
 
 avr_t * avr = NULL;
 avr_vcd_t vcd_file;
 
-enum exit_reasons {
-  SPECIAL_DEINIT = 1,
+enum {
+  RUNNING,
+  SPECIAL_DEINIT,
   TIMEOUT
-};
+} next_state = RUNNING;
+
+// static next_state next_state = 0;
+/*
+*/
 
 #define fail(s, ...) _fail(__FILE__, __LINE__, s, ## __VA_ARGS__)
 
@@ -44,22 +49,20 @@ void _fail(const char *filename, int linenum, const char *fmt, ...) {
 }
 
 avr_cycle_count_t tests_cycle_count = 0;
-static avr_cycle_count_t timeout_longjump_cb(struct avr_t *avr, avr_cycle_count_t when, void *param) {
-    jmp_buf *jmp = param;
-    longjmp(*jmp, TIMEOUT);
+static avr_cycle_count_t timeout_cb(struct avr_t *avr, avr_cycle_count_t when, void *param) {
+    next_state = TIMEOUT;
+    return 0;
 }
 
-static jmp_buf *special_deinit_jmpbuf = NULL;
-static void special_deinit_longjmp_cb(struct avr_t *avr) {
-    if (special_deinit_jmpbuf)
-        longjmp(*special_deinit_jmpbuf, SPECIAL_DEINIT);
+static void special_deinit_cb(struct avr_t *avr) {
+    next_state = SPECIAL_DEINIT;
 }
 
 uint16_t avr_run_one(avr_t *);
 
 static int my_avr_run(avr_t * avr)
 {
-    printf("avr->pc=%02x avr->cycle=% 10d\n", avr->pc, avr->cycle);
+//    printf("avr->pc=%02x avr->cycle=% 10d\n", avr->pc, avr->cycle);
     if (avr->state == cpu_Stopped)
         return avr->state;
 
@@ -84,7 +87,8 @@ static int my_avr_run(avr_t * avr)
         if (!avr->sreg[S_I]) {
 //            printf("simavr: sleeping with interrupts off, quitting gracefully\n");
             avr_terminate(avr);
-            fatal("Test case error: special_deinit() returned?");
+            next_state = SPECIAL_DEINIT;
+            return avr->state;
         }
         /*
          * try to sleep for as long as we can (?)
@@ -107,10 +111,6 @@ int main(int argc, char *argv[])
 {
     elf_firmware_t f;
     const char * fname = TEST_NAME "_target.axf";
-    char path[256];
-
-    //  sprintf(path, "%s/%s", dirname(argv[0]), fname);
-    //  printf("Firmware pathname is %s\n", path);
     elf_read_firmware(fname, &f);
 
 //    printf("firmware %s f=%d mmcu=%s\n", fname, (int)f.frequency, f.mmcu);
@@ -178,30 +178,31 @@ int main(int argc, char *argv[])
 
     avr_vcd_start(&vcd_file);
 
-    jmp_buf jmp;
-    special_deinit_jmpbuf = &jmp;
-    avr->special_deinit = special_deinit_longjmp_cb;   
-    avr_cycle_timer_register_usec(avr, MAX_TIME, timeout_longjump_cb, &jmp);
-    int reason = setjmp(jmp);
+    avr->special_deinit = special_deinit_cb;
+    avr_cycle_timer_register_usec(avr, MAX_TIME_US, timeout_cb, NULL);
 
-    tests_cycle_count = avr->cycle;
-    if (reason == 0) {
-        // setjmp() returned directly, run avr
-        while (1)
-            my_avr_run(avr);
+    while (next_state == RUNNING) {
+        my_avr_run(avr);
     }
 
-    printf("stopping VCD\n");
+    avr_cycle_count_t cycle = avr->cycle - 1;
+    printf("Stopping at %lu cycles, %0.03fs\n", cycle, cycle * (1.0f / avr->frequency));
+
+	// Stop the trace that's running from within the AVR
+    if(avr->vcd) {
+        avr_vcd_stop(avr->vcd);
+    }
     avr_vcd_stop(&vcd_file);
     avr_vcd_close(&vcd_file);
 
-    switch(reason) {
+    switch(next_state) {
     case SPECIAL_DEINIT:
         // returned from special deinit, avr stopped
         return EXIT_SUCCESS;
     case TIMEOUT:
-        // returned from longjmp(); cycle timer fired      
         fail("timeout");
         return EXIT_FAILURE;
+    default:
+        fatal("error");
     }
 }
