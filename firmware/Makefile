@@ -57,7 +57,7 @@ clean:
 ##############################################################
 # Documentation
 
-docs: docs/doc2545.pdf docs/00857a.pdf docs/doc8012.pdf
+docs: mkdir-docs docs/doc2545.pdf docs/00857a.pdf docs/doc8012.pdf
 
 docs/00857a.pdf:
 	(cd docs; wget http://ww1.microchip.com/downloads/en/AppNotes/00857a.pdf)
@@ -70,6 +70,9 @@ docs/doc8012.pdf:
 
 ##############################################################
 # Build targets
+
+mkdir-%:
+	@mkdir -p $(patsubst mkdir-%,%,$@)
 
 %: %.c
 	@echo CC $@
