@@ -54,6 +54,23 @@ clean:
 	@rm -rf $(wildcard *.vcd)
 	@rm -rf $(wildcard test_*_host)
 
+##############################################################
+# Documentation
+
+docs: docs/doc2545.pdf docs/00857a.pdf docs/doc8012.pdf
+
+docs/00857a.pdf:
+	(cd docs; wget http://ww1.microchip.com/downloads/en/AppNotes/00857a.pdf)
+
+docs/doc2545.pdf:
+	(cd docs; wget http://www.atmel.com/dyn/resources/prod_documents/doc2545.pdf)
+
+docs/doc8012.pdf:
+	(cd docs; wget http://atmel.com/dyn/resources/prod_documents/doc8012.pdf)
+
+##############################################################
+# Build targets
+
 %: %.c
 	@echo CC $@
 	@$(CC) \
