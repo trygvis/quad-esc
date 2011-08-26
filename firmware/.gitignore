@@ -1,4 +1,6 @@
 *.o
+*.o.d
+*.map
 *.axf
 *.vcd
 test_*_host

@@ -20,3 +20,4 @@ board/eagle_top.png
 board/eagle_top_mask.png
 board/eagle_top_silk.png
 board/*.eup
+/firmware/nbproject/private/
