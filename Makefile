@@ -11,7 +11,21 @@ else
 EAGLE = eagle
 endif
 
-all: generated/quad-esc.pdf generated/quad-esc-board.png generated/quad-esc-schematic.png
+all: generated/quad-esc.pdf generated/quad-esc-board.png generated/quad-esc-schematic.png docs
+
+docs: docs/irfz44n.pdf docs/ir4426.pdf docs/KT-5196A.pdf
+
+docs/irfz44n.pdf:
+	mkdir -p docs
+	cd docs; wget http://www.irf.com/product-info/datasheets/data/irfz44n.pdf
+
+docs/ir4426.pdf:
+	mkdir -p docs
+	cd docs; wget http://www.irf.com/product-info/datasheets/data/ir4426.pdf
+
+docs/KT-5196A.pdf:
+	mkdir -p docs
+	cd docs; wget wget http://store.qkits.com/moreinfo.cfm/KT-5196A.pdf
 
 generated/quad-esc.pdf: generated/quad-esc-schematic.pdf generated/quad-esc-board-top.pdf generated/quad-esc-board-bottom.pdf
 	@echo Combing all PDFs
