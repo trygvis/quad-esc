@@ -11,7 +11,14 @@ else
 EAGLE = eagle
 endif
 
-all: generated/quad-esc.pdf generated/quad-esc-board.png generated/quad-esc-schematic.png
+all: generated/quad-esc.pdf generated/quad-esc-board.png generated/quad-esc-schematic.png docs
+
+docs:
+	@mkdir -p docs
+	@cd docs; [ ! -r IRFZ44_45_40_42.pdf ] && wget http://www.chinaelite.com/pdf/IRFZ44_45_40_42.pdf; exit 0
+	@cd docs; [ ! -r irfz44n.pdf ] && wget http://www.irf.com/product-info/datasheets/data/irfz44n.pdf; exit 0
+	@cd docs; [ ! -r ir4426.pdf ] && wget http://www.irf.com/product-info/datasheets/data/ir4426.pdf; exit 0
+	@cd docs; [ ! -r KT-5196A.pdf ] && wget http://store.qkits.com/moreinfo.cfm/KT-5196A.pdf; exit 0
 
 generated/quad-esc.pdf: generated/quad-esc-schematic.pdf generated/quad-esc-board-top.pdf generated/quad-esc-board-bottom.pdf
 	@echo Combing all PDFs
@@ -61,3 +68,5 @@ clean:
 	@rm -f $(wildcard board/*.b#?) # board backups
 	@rm -f $(wildcard board/*.s#?) # schema backups
 	@rm -f $(wildcard eagle-library/*.l#?) # library backups
+
+.PHONY: docs

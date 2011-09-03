@@ -1,0 +1,7 @@
+set hcopypscolor=1
+set hcopydevtype=postscript
+hardcopy plot1.ps v(2) v(4) v(3)-v(4)
+hardcopy plot2.ps i(vin) i(vbat)
+
+gnuplot plot-a v(2) v(4) v(3)-v(4)
+gnuplot plot-b i(vin) i(vbat)

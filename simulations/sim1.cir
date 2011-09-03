@@ -1,0 +1,23 @@
+MOSFET DRIVER
+
+.include sihfz44.lib
+.model FOO NMOS level=1
+
+* PWL (time voltage)
+* Vin         1   0   PWL 0 0 1mil 10
+
+* PULSE (Vi V2 <TD <TR <TF <PW <PER>>>>>)
+Vin         1   0   PULSE (0 30 0.1mil 0.1mil 0.1mil 0.9mil 2mil)
+
+R1          1   2   50
+X1          3   2   4       irfz44n
+* M1          3   2   4 99       FOO
+Vbat        3   0   DC 12
+R2          4   0   100
+
+.IC         V(1) = 0
+.TEMP       25 -55 125
+
+.tran 1n 2.2mil
+
+.END
